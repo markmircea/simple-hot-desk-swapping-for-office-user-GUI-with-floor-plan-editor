@@ -19,8 +19,9 @@ class App {
         this.bookingManager = new BookingManager(this.floorPlan);
         await this.bookingManager.init();
 
-        // Make booking manager globally accessible for floor plan
+        // Make booking manager and floor plan globally accessible
         window.bookingManager = this.bookingManager;
+        window.floorPlan = this.floorPlan;
 
         // Setup admin panel
         this.setupAdminPanel();
@@ -35,14 +36,21 @@ class App {
         const addUserBtn = document.getElementById('add-user-btn');
 
         adminBtn.addEventListener('click', () => {
-            window.adminAuth.requireAuth(() => {
-                this.openAdminPanel();
-            }, 'Access Admin Panel');
+            // Admin button is only visible when authenticated
+            this.openAdminPanel();
         });
 
         addUserBtn.addEventListener('click', () => {
             this.addNewUser();
         });
+
+        // Change password button
+        const changePasswordBtn = document.getElementById('change-password-btn');
+        if (changePasswordBtn) {
+            changePasswordBtn.addEventListener('click', () => {
+                this.changeAdminPassword();
+            });
+        }
 
         // Close modal when clicking outside
         window.addEventListener('click', (e) => {
@@ -173,6 +181,36 @@ class App {
             
             alert('User added successfully!');
         }
+    }
+
+    changeAdminPassword() {
+        const newPassword = document.getElementById('new-admin-password').value;
+        const confirmPassword = document.getElementById('confirm-admin-password').value;
+        
+        if (!newPassword || !confirmPassword) {
+            alert('Please enter and confirm the new password.');
+            return;
+        }
+        
+        if (newPassword !== confirmPassword) {
+            alert('Passwords do not match. Please try again.');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            alert('Password must be at least 6 characters long.');
+            return;
+        }
+        
+        // Save new password to localStorage
+        localStorage.setItem('adminPassword', newPassword);
+        window.adminAuth.adminPassword = newPassword;
+        
+        // Clear input fields
+        document.getElementById('new-admin-password').value = '';
+        document.getElementById('confirm-admin-password').value = '';
+        
+        alert('Admin password changed successfully!');
     }
 }
 

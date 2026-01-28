@@ -21,6 +21,11 @@ class FloorPlan {
                 FLOOR_LAYOUT.desks = [];
                 FLOOR_LAYOUT.meetingRooms = [];
                 
+                // Add array for labels if not exists
+                if (!FLOOR_LAYOUT.labels) {
+                    FLOOR_LAYOUT.labels = [];
+                }
+                
                 // Load from database
                 data.seats.forEach(seat => {
                     if (seat.seat_type === 'meeting_room') {
@@ -31,6 +36,13 @@ class FloorPlan {
                             y: parseInt(seat.y_position),
                             width: parseInt(seat.width || 2),
                             height: parseInt(seat.height || 2)
+                        });
+                    } else if (seat.seat_type === 'label') {
+                        FLOOR_LAYOUT.labels.push({
+                            id: seat.id,
+                            text: seat.seat_number,
+                            x: parseInt(seat.x_position),
+                            y: parseInt(seat.y_position)
                         });
                     } else {
                         FLOOR_LAYOUT.desks.push({
@@ -50,14 +62,15 @@ class FloorPlan {
     }
 
     createSVG() {
-        // Make SVG large enough to show all content including meeting rooms
-        const svgWidth = 1000;
-        const svgHeight = 500;
+        // Make SVG large enough to show all content including meeting rooms and corner desks
+        // Add extra padding to ensure corner desks are visible
+        const svgWidth = 1200;
+        const svgHeight = 600;
 
         this.svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         this.svg.setAttribute('width', '100%');
         this.svg.setAttribute('height', '100%');
-        this.svg.setAttribute('viewBox', `0 0 ${svgWidth} ${svgHeight}`);
+        this.svg.setAttribute('viewBox', `-20 -20 ${svgWidth} ${svgHeight}`); // Add negative offset for better visibility
         this.svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         
         // Add a subtle grid for reference
@@ -99,6 +112,13 @@ class FloorPlan {
     }
 
     drawFloorPlan() {
+        // Draw area labels first (background layer)
+        if (FLOOR_LAYOUT.labels) {
+            FLOOR_LAYOUT.labels.forEach(label => {
+                this.drawAreaLabel(label);
+            });
+        }
+
         // Draw desks
         FLOOR_LAYOUT.desks.forEach(desk => {
             this.drawSeat(desk);
@@ -110,10 +130,28 @@ class FloorPlan {
         });
     }
 
+    drawAreaLabel(label) {
+        const x = parseInt(label.x) * 50 + 20;
+        const y = parseInt(label.y) * 50 + 20;
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', x);
+        text.setAttribute('y', y);
+        text.setAttribute('class', 'area-label-display');
+        text.style.fontSize = '18px';
+        text.style.fontWeight = 'bold';
+        text.style.fill = '#7f8c8d';
+        text.style.pointerEvents = 'none';
+        text.style.userSelect = 'none';
+        text.textContent = label.text;
+        
+        this.svg.appendChild(text);
+    }
+
     drawSeat(desk) {
         // Use the same coordinate system as the editor (gridSize * 2 = 50)
-        const x = parseInt(desk.x) * 50 + 40;
-        const y = parseInt(desk.y) * 50 + 40;
+        const x = parseInt(desk.x) * 50 + 20;
+        const y = parseInt(desk.y) * 50 + 20;
 
         // Create seat group
         const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -130,13 +168,14 @@ class FloorPlan {
         rect.setAttribute('class', 'seat available');
         rect.setAttribute('data-seat-id', desk.id);
 
-        // Create seat label
+        // Create seat label (will show seat number or user name)
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', x + CONFIG.SEAT_SIZE / 2);
         text.setAttribute('y', y + CONFIG.SEAT_SIZE / 2 + 3);
         text.setAttribute('text-anchor', 'middle');
         text.setAttribute('class', 'seat-label');
-        text.textContent = desk.id;
+        text.setAttribute('data-seat-id', desk.id);
+        text.textContent = desk.id; // Default to seat number
 
         group.appendChild(rect);
         group.appendChild(text);
@@ -148,8 +187,8 @@ class FloorPlan {
 
     drawMeetingRoom(room) {
         // Use the same coordinate system as the editor
-        const x = parseInt(room.x) * 50 + 40;
-        const y = parseInt(room.y) * 50 + 40;
+        const x = parseInt(room.x) * 50 + 20;
+        const y = parseInt(room.y) * 50 + 20;
         const width = parseInt(room.width || 2) * 50 - 10;
         const height = parseInt(room.height || 2) * 50 - 10;
 
@@ -209,44 +248,39 @@ class FloorPlan {
     updateSeatStatus(seatId, isBooked, userName = null) {
         const seat = this.svg.querySelector(`rect[data-seat-id="${seatId}"], rect[data-room-id="${seatId}"]`);
         const group = this.svg.querySelector(`g[data-seat-id="${seatId}"], g[data-room-id="${seatId}"]`);
+        const label = group ? group.querySelector('.seat-label') : null;
         
         if (seat) {
             seat.classList.remove('available', 'booked', 'selected');
-            
-            // Remove any existing user name label
-            const existingUserLabel = group ? group.querySelector('.user-name-label') : null;
-            if (existingUserLabel) {
-                existingUserLabel.remove();
-            }
             
             if (isBooked) {
                 seat.classList.add('booked');
                 this.bookings[seatId] = userName;
                 
-                // Add user name label
-                if (userName && group) {
-                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                    const rect = seat.getBoundingClientRect();
-                    const svgRect = this.svg.getBoundingClientRect();
-                    
-                    // Get seat position from its attributes
-                    const x = parseFloat(seat.getAttribute('x')) || 0;
-                    const y = parseFloat(seat.getAttribute('y')) || 0;
-                    const width = parseFloat(seat.getAttribute('width')) || 40;
-                    const height = parseFloat(seat.getAttribute('height')) || 40;
-                    
-                    text.setAttribute('x', x + width / 2);
-                    text.setAttribute('y', y + height + 15);
-                    text.setAttribute('text-anchor', 'middle');
-                    text.setAttribute('class', 'user-name-label');
-                    text.setAttribute('font-size', '10');
-                    text.setAttribute('fill', '#2c3e50');
-                    text.textContent = userName.split(' ')[0]; // Show first name only
-                    group.appendChild(text);
+                // Update the seat label to show user name
+                if (label && userName) {
+                    // Show first name only (or initials if name is long)
+                    const firstName = userName.split(' ')[0];
+                    if (firstName.length > 8) {
+                        // Show initials for long names
+                        const names = userName.split(' ');
+                        label.textContent = names.map(n => n[0]).join('').toUpperCase();
+                    } else {
+                        label.textContent = firstName;
+                    }
+                    label.style.fontSize = '9px';
+                    label.style.fontWeight = 'bold';
                 }
             } else {
                 seat.classList.add('available');
                 delete this.bookings[seatId];
+                
+                // Restore the seat number
+                if (label) {
+                    label.textContent = seatId;
+                    label.style.fontSize = '10px';
+                    label.style.fontWeight = 'normal';
+                }
             }
         }
     }

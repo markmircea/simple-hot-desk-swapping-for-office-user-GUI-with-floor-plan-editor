@@ -18,6 +18,17 @@ class BookingManager {
         document.getElementById('booking-date').addEventListener('change', (e) => {
             this.currentDate = e.target.value;
             this.loadBookings();
+            this.updateDateDisplay();
+        });
+
+        // Previous day button
+        document.getElementById('prev-day-btn').addEventListener('click', () => {
+            this.changeDate(-1);
+        });
+
+        // Next day button
+        document.getElementById('next-day-btn').addEventListener('click', () => {
+            this.changeDate(1);
         });
 
         // Modal controls
@@ -52,15 +63,65 @@ class BookingManager {
                 document.getElementById('user-select').value = '';
             }
         });
+
+        // Keyboard shortcuts for date navigation
+        document.addEventListener('keydown', (e) => {
+            // Don't trigger if user is typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            
+            if (e.key === 'ArrowLeft') {
+                this.changeDate(-1);
+            } else if (e.key === 'ArrowRight') {
+                this.changeDate(1);
+            }
+        });
     }
 
     setDefaultDate() {
         const today = new Date();
         const dateStr = today.toISOString().split('T')[0];
         document.getElementById('booking-date').value = dateStr;
-        document.getElementById('booking-date').min = dateStr;
+        // Remove min date to allow viewing past bookings
         this.currentDate = dateStr;
         this.loadBookings();
+        this.updateDateDisplay();
+    }
+
+    changeDate(days) {
+        const currentDate = new Date(this.currentDate);
+        currentDate.setDate(currentDate.getDate() + days);
+        const newDateStr = currentDate.toISOString().split('T')[0];
+        
+        document.getElementById('booking-date').value = newDateStr;
+        this.currentDate = newDateStr;
+        this.loadBookings();
+        this.updateDateDisplay();
+    }
+
+    updateDateDisplay() {
+        const date = new Date(this.currentDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        date.setHours(0, 0, 0, 0);
+        
+        // Update the selected info to show if viewing past/future
+        let dateInfo = '';
+        if (date < today) {
+            dateInfo = ' (Past)';
+        } else if (date > today) {
+            dateInfo = ' (Future)';
+        } else {
+            dateInfo = ' (Today)';
+        }
+        
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+        const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        
+        // Update header or info area with formatted date
+        const infoElement = document.getElementById('selected-info');
+        if (infoElement && infoElement.textContent === 'Click on a seat to book') {
+            infoElement.textContent = `${dayName}, ${formattedDate}${dateInfo} - Click on a seat to book`;
+        }
     }
 
     async loadUsers() {
@@ -307,7 +368,7 @@ class BookingManager {
     showInfo(message) {
         document.getElementById('selected-info').textContent = message;
         setTimeout(() => {
-            document.getElementById('selected-info').textContent = 'Click on a seat to book';
+            this.updateDateDisplay();
         }, 3000);
     }
 }

@@ -2,7 +2,7 @@
 class AdminAuth {
     constructor() {
         this.isAuthenticated = false;
-        this.adminPassword = 'admin123'; // In production, this should be hashed and stored securely
+        this.adminPassword = localStorage.getItem('adminPassword') || 'tpgcluj'; // Default password
         this.sessionTimeout = 30 * 60 * 1000; // 30 minutes
         this.sessionTimer = null;
         this.pendingAction = null;
@@ -22,9 +22,51 @@ class AdminAuth {
         }
 
         this.setupEventListeners();
+        this.updateUIState();
+    }
+
+    updateUIState() {
+        const adminOnlyButtons = document.querySelectorAll('.admin-only');
+        const loginButton = document.getElementById('admin-login-toggle-btn');
+        
+        if (this.isAuthenticated) {
+            // Show admin buttons
+            adminOnlyButtons.forEach(btn => {
+                btn.style.display = 'inline-block';
+            });
+            // Change login button text
+            loginButton.textContent = 'Admin Mode';
+            loginButton.style.background = '#27ae60';
+        } else {
+            // Hide admin buttons
+            adminOnlyButtons.forEach(btn => {
+                btn.style.display = 'none';
+            });
+            // Reset login button
+            loginButton.textContent = 'Admin Login';
+            loginButton.style.background = '';
+        }
     }
 
     setupEventListeners() {
+        // Admin login toggle button
+        document.getElementById('admin-login-toggle-btn').addEventListener('click', () => {
+            if (this.isAuthenticated) {
+                alert('You are already logged in as admin.');
+            } else {
+                this.showLoginModal('Admin Access');
+            }
+        });
+
+        // Admin logout button
+        document.getElementById('admin-logout-btn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                this.logout();
+                this.updateUIState();
+                alert('Logged out successfully.');
+            }
+        });
+
         // Admin login modal
         document.getElementById('admin-login-btn').addEventListener('click', () => {
             this.attemptLogin();
@@ -84,6 +126,7 @@ class AdminAuth {
             sessionStorage.setItem('adminSession', JSON.stringify(session));
             
             this.startSessionTimer();
+            this.updateUIState();
             this.closeLoginModal();
             
             // Execute pending action if any
@@ -92,7 +135,7 @@ class AdminAuth {
                 this.pendingAction = null;
             }
             
-            alert('Admin login successful!');
+            alert('Admin login successful! Admin panel and floor plan editor are now available.');
         } else {
             alert('Invalid password. Please try again.');
             document.getElementById('admin-password').value = '';

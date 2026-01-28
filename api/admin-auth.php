@@ -2,7 +2,7 @@
 require_once 'config.php';
 
 // Admin credentials (in production, use hashed passwords)
-define('ADMIN_PASSWORD', 'admin123');
+define('ADMIN_PASSWORD', 'tpgcluj');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Method not allowed']);

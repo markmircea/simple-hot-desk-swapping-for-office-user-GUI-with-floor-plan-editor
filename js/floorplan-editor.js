@@ -5,11 +5,13 @@ class FloorPlanEditor {
         this.svg = null;
         this.seats = [];
         this.meetingRooms = [];
+        this.areaLabels = [];
         this.deleteMode = false;
         this.isDragging = false;
-        this.draggedSeat = null;
+        this.draggedItem = null;
         this.dragOffset = { x: 0, y: 0 };
         this.nextSeatId = 100; // Start with high ID to avoid conflicts
+        this.nextLabelId = 1;
         this.gridSize = 25; // Grid snapping size
     }
 
@@ -22,9 +24,8 @@ class FloorPlanEditor {
     setupEventListeners() {
         // Editor modal buttons
         document.getElementById('edit-floorplan-btn').addEventListener('click', () => {
-            window.adminAuth.requireAuth(() => {
-                this.openEditor();
-            }, 'Edit Floor Plan');
+            // Edit button is only visible when authenticated
+            this.openEditor();
         });
 
         document.getElementById('add-desk-btn').addEventListener('click', () => {
@@ -33,6 +34,10 @@ class FloorPlanEditor {
 
         document.getElementById('add-meeting-room-btn').addEventListener('click', () => {
             this.addMeetingRoom();
+        });
+
+        document.getElementById('add-label-btn').addEventListener('click', () => {
+            this.addAreaLabel();
         });
 
         document.getElementById('delete-mode-btn').addEventListener('click', () => {
@@ -68,9 +73,9 @@ class FloorPlanEditor {
         this.deleteMode = false;
         document.getElementById('delete-mode-btn').classList.remove('active');
         
-        // Reload main floor plan to show any changes
-        if (window.floorPlan) {
-            window.location.reload();
+        // Reload main floor plan to show any changes without page refresh
+        if (window.floorPlan && window.floorPlan.loadFloorPlan) {
+            window.floorPlan.loadFloorPlan();
         }
     }
 
@@ -132,22 +137,30 @@ class FloorPlanEditor {
             if (data.success && data.seats) {
                 this.seats = [];
                 this.meetingRooms = [];
+                this.areaLabels = [];
                 
                 data.seats.forEach(seat => {
                     if (seat.seat_type === 'meeting_room') {
                         this.meetingRooms.push({
                             id: seat.id,
                             name: seat.seat_number,
-                            x: seat.x_position * this.gridSize * 2,
-                            y: seat.y_position * this.gridSize * 2,
-                            width: (seat.width || 2) * this.gridSize * 2,
-                            height: (seat.height || 2) * this.gridSize * 2
+                            x: seat.x_position * 50,  // x_position is stored in grid units of 50px
+                            y: seat.y_position * 50,
+                            width: (seat.width || 4) * 50,  // width is stored in grid units of 50px
+                            height: (seat.height || 4) * 50  // height is stored in grid units of 50px
+                        });
+                    } else if (seat.seat_type === 'label') {
+                        this.areaLabels.push({
+                            id: seat.id,
+                            text: seat.seat_number,
+                            x: seat.x_position * 50,  // x_position is stored in grid units of 50px
+                            y: seat.y_position * 50
                         });
                     } else {
                         this.seats.push({
                             id: seat.id,
-                            x: seat.x_position * this.gridSize * 2,
-                            y: seat.y_position * this.gridSize * 2
+                            x: seat.x_position * 50,  // x_position is stored in grid units of 50px
+                            y: seat.y_position * 50
                         });
                     }
                 });
@@ -164,26 +177,31 @@ class FloorPlanEditor {
     loadDefaultLayout() {
         this.seats = FLOOR_LAYOUT.desks.map(desk => ({
             id: desk.id,
-            x: desk.x * this.gridSize * 2,
-            y: desk.y * this.gridSize * 2
+            x: desk.x * 50,  // Use consistent 50px grid units
+            y: desk.y * 50
         }));
         
         this.meetingRooms = FLOOR_LAYOUT.meetingRooms.map(room => ({
             id: room.id,
             name: room.name,
-            x: room.x * this.gridSize * 2,
-            y: room.y * this.gridSize * 2,
-            width: room.width * this.gridSize * 2,
-            height: room.height * this.gridSize * 2
+            x: room.x * 50,  // Use consistent 50px grid units
+            y: room.y * 50,
+            width: room.width * 50,  // width is in grid units, convert to pixels
+            height: room.height * 50  // height is in grid units, convert to pixels
         }));
         
         this.renderLayout();
     }
 
     renderLayout() {
-        // Clear existing seats (keep grid)
-        const existingSeats = this.svg.querySelectorAll('.seat-group, .room-group');
-        existingSeats.forEach(seat => seat.remove());
+        // Clear existing seats, rooms, and labels (keep grid)
+        const existingItems = this.svg.querySelectorAll('.seat-group, .room-group, .label-group');
+        existingItems.forEach(item => item.remove());
+
+        // Render area labels first (so they appear behind seats)
+        this.areaLabels.forEach(label => {
+            this.drawEditableLabel(label);
+        });
 
         // Render seats
         this.seats.forEach(seat => {
@@ -273,12 +291,37 @@ class FloorPlanEditor {
         rect.addEventListener('click', (e) => this.handleRoomClick(e, room));
     }
 
+    drawEditableLabel(label) {
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'label-group');
+        group.setAttribute('data-label-id', label.id);
+
+        // Create text element
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', label.x);
+        text.setAttribute('y', label.y);
+        text.setAttribute('class', 'area-label');
+        text.setAttribute('data-label-id', label.id);
+        text.style.fontSize = '16px';
+        text.style.fontWeight = 'bold';
+        text.style.fill = '#34495e';
+        text.style.cursor = 'move';
+        text.textContent = label.text;
+
+        group.appendChild(text);
+        this.svg.appendChild(group);
+
+        // Add event listeners
+        text.addEventListener('mousedown', (e) => this.handleLabelMouseDown(e, label));
+        text.addEventListener('click', (e) => this.handleLabelClick(e, label));
+    }
+
     handleSeatMouseDown(e, seat) {
         if (this.deleteMode) return;
         
         e.preventDefault();
         this.isDragging = true;
-        this.draggedSeat = seat;
+        this.draggedItem = seat;
         
         const rect = this.svg.getBoundingClientRect();
         this.dragOffset = {
@@ -294,7 +337,7 @@ class FloorPlanEditor {
         
         e.preventDefault();
         this.isDragging = true;
-        this.draggedSeat = room;
+        this.draggedItem = room;
         
         const rect = this.svg.getBoundingClientRect();
         this.dragOffset = {
@@ -305,8 +348,24 @@ class FloorPlanEditor {
         e.target.classList.add('dragging');
     }
 
+    handleLabelMouseDown(e, label) {
+        if (this.deleteMode) return;
+        
+        e.preventDefault();
+        this.isDragging = true;
+        this.draggedItem = label;
+        
+        const rect = this.svg.getBoundingClientRect();
+        this.dragOffset = {
+            x: e.clientX - rect.left - label.x,
+            y: e.clientY - rect.top - label.y
+        };
+        
+        e.target.classList.add('dragging');
+    }
+
     handleMouseMove(e) {
-        if (!this.isDragging || !this.draggedSeat) return;
+        if (!this.isDragging || !this.draggedItem) return;
         
         const rect = this.svg.getBoundingClientRect();
         let newX = e.clientX - rect.left - this.dragOffset.x;
@@ -317,8 +376,8 @@ class FloorPlanEditor {
         newY = Math.round(newY / this.gridSize) * this.gridSize;
         
         // Update position
-        this.draggedSeat.x = newX;
-        this.draggedSeat.y = newY;
+        this.draggedItem.x = newX;
+        this.draggedItem.y = newY;
         
         // Re-render
         this.renderLayout();
@@ -327,7 +386,7 @@ class FloorPlanEditor {
     handleMouseUp() {
         if (this.isDragging) {
             this.isDragging = false;
-            this.draggedSeat = null;
+            this.draggedItem = null;
             
             // Remove dragging class
             const dragging = this.svg.querySelector('.dragging');
@@ -342,8 +401,6 @@ class FloorPlanEditor {
             e.stopPropagation();
             if (confirm(`Delete desk ${seat.id}?`)) {
                 this.seats = this.seats.filter(s => s.id !== seat.id);
-                // Renumber remaining desks
-                this.renumberDesks();
                 this.renderLayout();
             }
         }
@@ -354,6 +411,16 @@ class FloorPlanEditor {
             e.stopPropagation();
             if (confirm(`Delete ${room.name}?`)) {
                 this.meetingRooms = this.meetingRooms.filter(r => r.id !== room.id);
+                this.renderLayout();
+            }
+        }
+    }
+
+    handleLabelClick(e, label) {
+        if (this.deleteMode) {
+            e.stopPropagation();
+            if (confirm(`Delete label "${label.text}"?`)) {
+                this.areaLabels = this.areaLabels.filter(l => l.id !== label.id);
                 this.renderLayout();
             }
         }
@@ -375,21 +442,27 @@ class FloorPlanEditor {
     }
 
     addDesk() {
-        // Add new desk with next sequential number based on total count
-        const totalDesks = this.seats.length + 1;
+        // Find the highest existing desk number
+        let maxId = 0;
+        this.seats.forEach(seat => {
+            const id = parseInt(seat.id);
+            if (!isNaN(id) && id > maxId) {
+                maxId = id;
+            }
+        });
+        
+        // Add new desk with next number after max
+        const newDeskId = maxId + 1;
         
         // Find a visible position (center of viewport)
         const newSeat = {
-            id: String(totalDesks),
+            id: String(newDeskId),
             x: 200,  // More centered position
             y: 200,
             isNew: true  // Mark as new for highlighting
         };
         
         this.seats.push(newSeat);
-        
-        // Renumber all desks sequentially
-        this.renumberDesks();
         
         this.renderLayout();
         
@@ -404,6 +477,7 @@ class FloorPlanEditor {
     }
     
     renumberDesks() {
+        // This function is now optional - only used when explicitly wanting to renumber
         // Sort seats by position (left to right, top to bottom)
         this.seats.sort((a, b) => {
             if (Math.abs(a.y - b.y) < 20) {
@@ -412,7 +486,7 @@ class FloorPlanEditor {
             return a.y - b.y;
         });
         
-        // Renumber them sequentially
+        // Renumber them sequentially from 1
         this.seats.forEach((seat, index) => {
             seat.id = String(index + 1);
         });
@@ -421,6 +495,23 @@ class FloorPlanEditor {
     addMeetingRoom() {
         const roomName = prompt('Enter meeting room name:');
         if (!roomName) return;
+        
+        // Ask for dimensions in grid units
+        const widthInput = prompt('Enter width in grid units (e.g., 4 for 4 grid squares):', '4');
+        if (!widthInput) return;
+        const width = parseInt(widthInput);
+        if (isNaN(width) || width < 1 || width > 10) {
+            alert('Width must be a number between 1 and 10');
+            return;
+        }
+        
+        const heightInput = prompt('Enter height in grid units (e.g., 4 for 4 grid squares):', '4');
+        if (!heightInput) return;
+        const height = parseInt(heightInput);
+        if (isNaN(height) || height < 1 || height > 10) {
+            alert('Height must be a number between 1 and 10');
+            return;
+        }
         
         // Find the highest existing meeting room number
         let maxNum = 0;
@@ -438,34 +529,65 @@ class FloorPlanEditor {
             name: roomName,
             x: 100,
             y: 100,
-            width: 100,
-            height: 75
+            width: width * this.gridSize,  // Convert grid units to pixels (25px per grid unit)
+            height: height * this.gridSize  // Convert grid units to pixels (25px per grid unit)
         };
         
         this.meetingRooms.push(newRoom);
         this.renderLayout();
-        alert(`Added ${roomName}. Drag it to the desired position.`);
+        alert(`Added ${roomName} (${width}x${height} grid units). Drag it to the desired position.`);
+    }
+
+    addAreaLabel() {
+        const labelText = prompt('Enter area label text (e.g., "Engineering", "Sales Area", "Reception"):');
+        if (!labelText) return;
+        
+        // Find the highest existing label ID
+        let maxId = 0;
+        this.areaLabels.forEach(label => {
+            if (label.id.startsWith('L')) {
+                const num = parseInt(label.id.substring(1));
+                if (!isNaN(num) && num > maxId) {
+                    maxId = num;
+                }
+            }
+        });
+        
+        const newLabel = {
+            id: 'L' + (maxId + 1),
+            text: labelText,
+            x: 300,
+            y: 100
+        };
+        
+        this.areaLabels.push(newLabel);
+        this.renderLayout();
+        alert(`Added label "${labelText}". Drag it to the desired position.`);
     }
 
     async saveLayout() {
-        // Ensure desks are numbered sequentially before saving
-        this.renumberDesks();
-        
         const layoutData = {
             seats: this.seats.map(seat => ({
                 id: seat.id,
-                x_position: Math.round(seat.x / (this.gridSize * 2)),
-                y_position: Math.round(seat.y / (this.gridSize * 2)),
+                x_position: Math.round(seat.x / 50),  // Convert pixels back to grid units
+                y_position: Math.round(seat.y / 50),
                 seat_type: 'desk'
             })),
             meeting_rooms: this.meetingRooms.map(room => ({
                 id: room.id,
                 name: room.name,
-                x_position: Math.round(room.x / (this.gridSize * 2)),
-                y_position: Math.round(room.y / (this.gridSize * 2)),
-                width: Math.round(room.width / (this.gridSize * 2)),
-                height: Math.round(room.height / (this.gridSize * 2)),
+                x_position: Math.round(room.x / 50),  // Convert pixels back to grid units
+                y_position: Math.round(room.y / 50),
+                width: Math.round(room.width / 50),  // Convert pixels back to grid units
+                height: Math.round(room.height / 50),
                 seat_type: 'meeting_room'
+            })),
+            labels: this.areaLabels.map(label => ({
+                id: label.id,
+                text: label.text,
+                x_position: Math.round(label.x / 50),  // Convert pixels back to grid units
+                y_position: Math.round(label.y / 50),
+                seat_type: 'label'
             }))
         };
 
@@ -482,6 +604,10 @@ class FloorPlanEditor {
             
             if (data.success) {
                 alert('Floor plan saved successfully!');
+                // Refresh the main floor plan before closing
+                if (window.floorPlan && window.floorPlan.loadFloorPlan) {
+                    await window.floorPlan.loadFloorPlan();
+                }
                 this.closeEditor();
             } else {
                 alert('Failed to save floor plan: ' + (data.message || 'Unknown error'));

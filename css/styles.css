@@ -35,12 +35,47 @@ header h1 {
     align-items: center;
 }
 
+.date-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .date-picker label {
-    margin-right: 10px;
     font-weight: 500;
 }
 
-.date-picker input {
+.date-navigation {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.date-nav-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.date-nav-btn:hover {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.date-nav-btn:active {
+    transform: scale(0.95);
+}
+
+#booking-date {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -59,6 +94,14 @@ header h1 {
 
 .admin-btn:hover {
     background: #2980b9;
+}
+
+#admin-logout-btn {
+    background: #e74c3c;
+}
+
+#admin-logout-btn:hover {
+    background: #c0392b;
 }
 
 main {
@@ -104,12 +147,12 @@ main {
 
 .floor-plan {
     width: 100%;
-    min-height: 600px;
+    min-height: 650px;
     background: #fafafa;
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 20px;
-    overflow-x: auto;
+    padding: 10px;
+    overflow: auto;
 }
 
 .floor-plan svg {
@@ -427,6 +470,15 @@ main {
         flex-direction: column;
         gap: 10px;
         align-items: stretch;
+    }
+    
+    .date-picker {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-navigation {
+        justify-content: center;
     }
     
     .legend {

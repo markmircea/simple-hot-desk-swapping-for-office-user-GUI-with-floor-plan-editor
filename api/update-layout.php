@@ -14,6 +14,9 @@ if (!isset($data['seats']) || !isset($data['meeting_rooms'])) {
     exit;
 }
 
+// Labels are optional
+$labels = isset($data['labels']) ? $data['labels'] : [];
+
 try {
     // Start transaction
     $db->beginTransaction();
@@ -67,6 +70,19 @@ try {
                 $room['height'] ?? 2
             ]);
         }
+        
+        // Add area labels
+        foreach ($labels as $label) {
+            $stmt->execute([
+                $label['id'],
+                $label['text'],
+                'label',
+                $label['x_position'],
+                $label['y_position'],
+                1,
+                1
+            ]);
+        }
     } else {
         // Old schema without width/height columns
         $stmt = $db->prepare("INSERT INTO seats (id, seat_number, seat_type, x_position, y_position, is_available) VALUES (?, ?, ?, ?, ?, 1)");
@@ -96,6 +112,17 @@ try {
                 'meeting_room',
                 $room['x_position'],
                 $room['y_position']
+            ]);
+        }
+        
+        // Add area labels
+        foreach ($labels as $label) {
+            $stmt->execute([
+                $label['id'],
+                $label['text'],
+                'label',
+                $label['x_position'],
+                $label['y_position']
             ]);
         }
     }

@@ -66,7 +66,7 @@ const FLOOR_LAYOUT = {
         { id: 42, x: 5, y: 6 }
     ],
     meetingRooms: [
-        { id: 'M1', name: 'Meeting Room 1', x: 7, y: 1, width: 2, height: 2 },
-        { id: 'M2', name: 'Meeting Room 2', x: 7, y: 4, width: 2, height: 2 }
+        { id: 'M1', name: 'Meeting Room 1', x: 7, y: 1, width: 4, height: 4 },
+        { id: 'M2', name: 'Meeting Room 2', x: 7, y: 4, width: 4, height: 4 }
     ]
 };

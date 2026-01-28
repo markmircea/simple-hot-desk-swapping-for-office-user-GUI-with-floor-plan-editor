@@ -13,10 +13,16 @@
             <div class="controls">
                 <div class="date-picker">
                     <label for="booking-date">Select Date:</label>
-                    <input type="date" id="booking-date" min="">
+                    <div class="date-navigation">
+                        <button id="prev-day-btn" class="date-nav-btn" title="Previous Day">◀</button>
+                        <input type="date" id="booking-date">
+                        <button id="next-day-btn" class="date-nav-btn" title="Next Day">▶</button>
+                    </div>
                 </div>
-                <button id="admin-btn" class="admin-btn">Admin</button>
-                <button id="edit-floorplan-btn" class="admin-btn">Edit Floor Plan</button>
+                <button id="admin-login-toggle-btn" class="admin-btn">Admin Login</button>
+                <button id="admin-btn" class="admin-btn admin-only" style="display:none;">Admin Panel</button>
+                <button id="edit-floorplan-btn" class="admin-btn admin-only" style="display:none;">Edit Floor Plan</button>
+                <button id="admin-logout-btn" class="admin-btn admin-only" style="display:none;">Logout</button>
             </div>
         </header>
 
@@ -81,10 +87,11 @@
                 <div class="editor-toolbar">
                     <button id="add-desk-btn" class="btn btn-primary">Add Desk</button>
                     <button id="add-meeting-room-btn" class="btn btn-primary">Add Meeting Room</button>
+                    <button id="add-label-btn" class="btn btn-primary">Add Label</button>
                     <button id="delete-mode-btn" class="btn btn-danger">Delete Mode</button>
                     <button id="save-floorplan-btn" class="btn btn-success">Save Layout</button>
                     <button id="reset-floorplan-btn" class="btn btn-secondary">Reset to Default</button>
-                    <span class="editor-info">Drag seats to move them. Click Delete Mode then click seats to remove.</span>
+                    <span class="editor-info">Drag items to move. Delete Mode to remove. Labels are for display only.</span>
                 </div>
                 <div id="editor-floor-plan" class="editor-floor-plan">
                     <!-- Editor SVG will be here -->
@@ -105,7 +112,7 @@
                     <button id="admin-login-btn" class="btn btn-primary">Login</button>
                     <button id="admin-cancel-btn" class="btn btn-secondary">Cancel</button>
                 </div>
-                <p class="admin-hint">Default password: admin123</p>
+                <p class="admin-hint">Default password: tpgcluj</p>
             </div>
         </div>
 
@@ -125,6 +132,14 @@
                 <div class="admin-section">
                     <h3>Current Users</h3>
                     <ul id="users-list" class="users-list"></ul>
+                </div>
+                <div class="admin-section">
+                    <h3>Change Admin Password</h3>
+                    <div class="form-group">
+                        <input type="password" id="new-admin-password" placeholder="Enter new password">
+                        <input type="password" id="confirm-admin-password" placeholder="Confirm new password">
+                        <button id="change-password-btn" class="btn btn-primary">Change Password</button>
+                    </div>
                 </div>
             </div>
         </div>
