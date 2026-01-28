@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Office Seat Booking</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Office Seat Booking</h1>
+            <div class="controls">
+                <div class="date-picker">
+                    <label for="booking-date">Select Date:</label>
+                    <input type="date" id="booking-date" min="">
+                </div>
+                <button id="admin-btn" class="admin-btn">Admin</button>
+                <button id="edit-floorplan-btn" class="admin-btn">Edit Floor Plan</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="seat-icon available"></span>
+                    <span>Available</span>
+                </div>
+                <div class="legend-item">
+                    <span class="seat-icon booked"></span>
+                    <span>Booked</span>
+                </div>
+                <div class="legend-item">
+                    <span class="seat-icon selected"></span>
+                    <span>Selected</span>
+                </div>
+            </div>
+
+            <div id="floor-plan" class="floor-plan">
+                <!-- SVG floor plan will be dynamically generated here -->
+            </div>
+
+            <div class="booking-info">
+                <p id="selected-info">Click on a seat to book</p>
+            </div>
+        </main>
+
+        <!-- Booking Modal -->
+        <div id="booking-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modal-title">Book Seat</h2>
+                <div id="modal-body">
+                    <div class="form-group">
+                        <label for="user-select">Select Existing User:</label>
+                        <select id="user-select">
+                            <option value="">Choose from list...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-booking">Or Enter New Name:</label>
+                        <input type="text" id="new-user-booking" placeholder="Type a name to create new user">
+                    </div>
+                    <div class="form-group" id="existing-booking" style="display:none;">
+                        <p>This seat is already booked by: <strong id="booked-by"></strong></p>
+                    </div>
+                    <div class="modal-actions">
+                        <button id="confirm-booking" class="btn btn-primary">Book Seat</button>
+                        <button id="cancel-booking" class="btn btn-danger" style="display:none;">Cancel Booking</button>
+                        <button id="close-modal" class="btn btn-secondary">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floor Plan Editor Modal -->
+        <div id="floorplan-editor-modal" class="modal">
+            <div class="modal-content modal-wide">
+                <span class="close">&times;</span>
+                <h2>Floor Plan Editor</h2>
+                <div class="editor-toolbar">
+                    <button id="add-desk-btn" class="btn btn-primary">Add Desk</button>
+                    <button id="add-meeting-room-btn" class="btn btn-primary">Add Meeting Room</button>
+                    <button id="delete-mode-btn" class="btn btn-danger">Delete Mode</button>
+                    <button id="save-floorplan-btn" class="btn btn-success">Save Layout</button>
+                    <button id="reset-floorplan-btn" class="btn btn-secondary">Reset to Default</button>
+                    <span class="editor-info">Drag seats to move them. Click Delete Mode then click seats to remove.</span>
+                </div>
+                <div id="editor-floor-plan" class="editor-floor-plan">
+                    <!-- Editor SVG will be here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Login Modal -->
+        <div id="admin-login-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Admin Login</h2>
+                <div class="form-group">
+                    <label for="admin-password">Password:</label>
+                    <input type="password" id="admin-password" placeholder="Enter admin password">
+                </div>
+                <div class="modal-actions">
+                    <button id="admin-login-btn" class="btn btn-primary">Login</button>
+                    <button id="admin-cancel-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+                <p class="admin-hint">Default password: admin123</p>
+            </div>
+        </div>
+
+        <!-- Admin Modal -->
+        <div id="admin-modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Admin Panel</h2>
+                <div class="admin-section">
+                    <h3>Add New User</h3>
+                    <div class="form-group">
+                        <input type="text" id="new-user-name" placeholder="Enter user name">
+                        <input type="email" id="new-user-email" placeholder="Enter email (optional)">
+                        <button id="add-user-btn" class="btn btn-primary">Add User</button>
+                    </div>
+                </div>
+                <div class="admin-section">
+                    <h3>Current Users</h3>
+                    <ul id="users-list" class="users-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/floorplan.js"></script>
+    <script src="js/booking.js"></script>
+    <script src="js/floorplan-editor.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

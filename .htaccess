@@ -1,0 +1,16 @@
+# Ensure PHP is enabled
+AddHandler application/x-httpd-php .php
+
+# Set default index file
+DirectoryIndex index.html index.php
+
+# Prevent directory listing
+Options -Indexes
+
+# Enable mod_rewrite for API
+RewriteEngine On
+
+# Security headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
