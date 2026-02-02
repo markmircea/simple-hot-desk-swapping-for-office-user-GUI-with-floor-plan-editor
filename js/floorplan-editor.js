@@ -18,7 +18,7 @@ class FloorPlanEditor {
     init() {
         this.container = document.getElementById('editor-floor-plan');
         this.setupEventListeners();
-        this.loadCurrentLayout();
+        // Don't load layout on init - only when editor is opened
     }
 
     setupEventListeners() {
@@ -169,8 +169,10 @@ class FloorPlanEditor {
             }
         } catch (error) {
             console.error('Error loading layout:', error);
-            // Load default layout if API fails
-            this.loadDefaultLayout();
+            // Load default layout if API fails, but only if SVG exists
+            if (this.svg) {
+                this.loadDefaultLayout();
+            }
         }
     }
 
@@ -190,10 +192,21 @@ class FloorPlanEditor {
             height: room.height * 50  // height is in grid units, convert to pixels
         }));
         
+        // Only initialize labels array if not already present
+        if (!this.areaLabels) {
+            this.areaLabels = [];
+        }
+        
         this.renderLayout();
     }
 
     renderLayout() {
+        // Only render if SVG exists
+        if (!this.svg) {
+            console.warn('SVG not created yet, skipping render');
+            return;
+        }
+        
         // Clear existing seats, rooms, and labels (keep grid)
         const existingItems = this.svg.querySelectorAll('.seat-group, .room-group, .label-group');
         existingItems.forEach(item => item.remove());

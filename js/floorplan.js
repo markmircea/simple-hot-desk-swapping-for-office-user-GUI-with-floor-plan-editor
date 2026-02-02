@@ -4,6 +4,9 @@ class FloorPlan {
         this.container = container;
         this.selectedSeat = null;
         this.bookings = {};
+        this.scale = 1;
+        this.isPinching = false;
+        this.lastDistance = 0;
     }
 
     async init() {
@@ -78,6 +81,9 @@ class FloorPlan {
         
         this.container.innerHTML = '';
         this.container.appendChild(this.svg);
+        
+        // Add touch event listeners for mobile pinch-to-zoom
+        this.setupTouchEvents();
     }
 
     drawGrid(width, height) {
@@ -181,8 +187,12 @@ class FloorPlan {
         group.appendChild(text);
         this.svg.appendChild(group);
 
-        // Add click handler
+        // Add click and touch handlers
         rect.addEventListener('click', () => this.handleSeatClick(desk.id));
+        rect.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.handleSeatClick(desk.id);
+        });
     }
 
     drawMeetingRoom(room) {
@@ -218,8 +228,12 @@ class FloorPlan {
         group.appendChild(text);
         this.svg.appendChild(group);
 
-        // Add click handler
+        // Add click and touch handlers
         rect.addEventListener('click', () => this.handleSeatClick(room.id));
+        rect.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.handleSeatClick(room.id);
+        });
     }
 
     handleSeatClick(seatId) {
@@ -312,5 +326,61 @@ class FloorPlan {
         } else {
             return { id: seatIdStr, name: `Desk ${seatIdStr}`, type: 'desk' };
         }
+    }
+    
+    setupTouchEvents() {
+        let touchStartDistance = 0;
+        let touchStartScale = 1;
+        
+        this.container.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                this.isPinching = true;
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                touchStartDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                touchStartScale = this.scale;
+            }
+        });
+        
+        this.container.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && this.isPinching) {
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                this.scale = Math.max(0.5, Math.min(3, touchStartScale * (currentDistance / touchStartDistance)));
+                this.container.style.transform = `scale(${this.scale})`;
+                this.container.style.transformOrigin = 'center center';
+            }
+        });
+        
+        this.container.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                this.isPinching = false;
+            }
+        });
+        
+        // Add double-tap to reset zoom
+        let lastTap = 0;
+        this.container.addEventListener('touchend', (e) => {
+            if (e.touches.length === 0 && !this.isPinching) {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 500 && tapLength > 0) {
+                    this.scale = 1;
+                    this.container.style.transform = `scale(${this.scale})`;
+                    e.preventDefault();
+                }
+                lastTap = currentTime;
+            }
+        });
     }
 }
